@@ -359,7 +359,7 @@ module "alb" {
 # to Teleport and logged into an AWS resource with appropriate permissions. 
 # ---------------------------------------------------------------------------- #
 output "service_task_exec_list_task" {
-  description = "Stable and unique string identifying the task execution IAM role"
+  description = "List running tasks in the ECS Cluster"
   value       = <<-ECS_DESCRIBE
     tsh aws ecs list-tasks \
         --cluster ${module.ecs_cluster.name} \
@@ -368,7 +368,7 @@ output "service_task_exec_list_task" {
 }
 
 output "service_task_exec_example" {
-  description = "Stable and unique string identifying the task execution IAM role"
+  description = "Exec into the first running task listed."
   value       = <<-ECS_EXAMPLE
     tsh aws ecs execute-command --cluster ${module.ecs_cluster.name} \
         --container ${local.container_name} \
