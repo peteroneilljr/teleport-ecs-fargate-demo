@@ -67,6 +67,7 @@ module "ecs_cluster" {
   source = "../modules/cluster"
 
   cluster_name = local.name
+  create_cloudwatch_log_group = false
 
   # tags = local.tags
 }
