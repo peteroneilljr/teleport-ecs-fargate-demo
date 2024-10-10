@@ -218,7 +218,7 @@ resource "aws_service_discovery_http_namespace" "this" {
 # These outputs are dependant on your local machine being authenticated
 # to Teleport and logged into an AWS resource with appropriate permissions. 
 # ---------------------------------------------------------------------------- #
-output "service_task_exec_list_task" {
+output "ecs_list_tasks" {
   description = "List running tasks in the ECS Cluster"
   value       = <<-ECS_DESCRIBE
     tsh aws ecs list-tasks \
@@ -226,8 +226,17 @@ output "service_task_exec_list_task" {
         --desired-status "RUNNING"
     ECS_DESCRIBE
 }
-
-output "service_task_exec_example" {
+output "ecs_describe_task" {
+  description = "Exec will not work until last status is RUNNING"
+  value       = <<-ECS_DESCRIBE
+    tsh aws ecs describe-tasks \
+        --cluster pon-ecs \
+        --tasks $(tsh aws ecs list-tasks \
+          --cluster pon-ecs \
+          --desired-status "RUNNING" | jq -r ".taskArns[0]") | jq -r ".tasks[0].lastStatus"
+    ECS_DESCRIBE
+}
+output "ecs_exec_task" {
   description = "Exec into the first running task listed."
   value       = <<-ECS_EXAMPLE
     tsh aws ecs execute-command --cluster ${module.ecs_cluster.name} \
