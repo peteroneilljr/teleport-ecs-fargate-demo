@@ -181,24 +181,8 @@ module "ecs_service" {
     }
   }
 
-  load_balancer = {
-    service = {
-      target_group_arn = module.alb.target_groups["ex_ecs"].arn
-      container_name   = local.container_name
-      container_port   = local.container_port
-    }
-  }
-
   subnet_ids = local.private_subnets
   security_group_rules = {
-    alb_ingress_3000 = {
-      type                     = "ingress"
-      from_port                = local.container_port
-      to_port                  = local.container_port
-      protocol                 = "tcp"
-      description              = "Service port"
-      source_security_group_id = module.alb.security_group_id
-    }
     egress_all = {
       type        = "egress"
       from_port   = 0
@@ -210,59 +194,6 @@ module "ecs_service" {
 
   service_tags = {
     "ServiceTag" = "Tag on service level"
-  }
-
-  # tags = local.tags
-}
-
-################################################################################
-# Standalone Task Definition (w/o Service)
-################################################################################
-
-module "ecs_task_definition" {
-  source = "../modules/service"
-
-  # Service
-  name        = "${local.name}-standalone"
-  cluster_arn = module.ecs_cluster.arn
-
-  # Task Definition
-  volume = {
-    ex-vol = {}
-  }
-
-  runtime_platform = {
-    cpu_architecture        = "ARM64"
-    operating_system_family = "LINUX"
-  }
-
-  # Container definition(s)
-  container_definitions = {
-    al2023 = {
-      image = "public.ecr.aws/amazonlinux/amazonlinux:2023-minimal"
-
-      mount_points = [
-        {
-          sourceVolume  = "ex-vol",
-          containerPath = "/var/www/ex-vol"
-        }
-      ]
-
-      command    = ["echo hello world"]
-      entrypoint = ["/usr/bin/sh", "-c"]
-    }
-  }
-
-  subnet_ids = local.private_subnets
-
-  security_group_rules = {
-    egress_all = {
-      type        = "egress"
-      from_port   = 0
-      to_port     = 0
-      protocol    = "-1"
-      cidr_blocks = ["0.0.0.0/0"]
-    }
   }
 
   # tags = local.tags
@@ -281,77 +212,6 @@ resource "aws_service_discovery_http_namespace" "this" {
   description = "CloudMap namespace for ${local.name}"
   # tags        = local.tags
 }
-
-module "alb" {
-  source  = "terraform-aws-modules/alb/aws"
-  version = "~> 9.0"
-
-  name = local.name
-
-  load_balancer_type = "application"
-
-  vpc_id  = local.vpc_id
-  subnets = local.public_subnets
-
-  # For example only
-  enable_deletion_protection = false
-
-  # Security Group
-  security_group_ingress_rules = {
-    all_http = {
-      from_port   = 80
-      to_port     = 80
-      ip_protocol = "tcp"
-      cidr_ipv4   = "0.0.0.0/0"
-    }
-  }
-  security_group_egress_rules = {
-    all = {
-      ip_protocol = "-1"
-      cidr_ipv4   = local.vpc_cidr_block
-    }
-  }
-
-  listeners = {
-    ex_http = {
-      port     = 80
-      protocol = "HTTP"
-
-      forward = {
-        target_group_key = "ex_ecs"
-      }
-    }
-  }
-
-  target_groups = {
-    ex_ecs = {
-      backend_protocol                  = "HTTP"
-      backend_port                      = local.container_port
-      target_type                       = "ip"
-      deregistration_delay              = 5
-      load_balancing_cross_zone_enabled = true
-
-      health_check = {
-        enabled             = true
-        healthy_threshold   = 5
-        interval            = 30
-        matcher             = "200"
-        path                = "/"
-        port                = "traffic-port"
-        protocol            = "HTTP"
-        timeout             = 5
-        unhealthy_threshold = 2
-      }
-
-      # There's nothing to attach here in this definition. Instead,
-      # ECS will attach the IPs of the tasks to this target group
-      create_attachment = false
-    }
-  }
-
-  # tags = local.tags
-}
-
 
 # ---------------------------------------------------------------------------- #
 # outputs
