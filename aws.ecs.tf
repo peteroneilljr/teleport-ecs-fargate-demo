@@ -201,7 +201,7 @@ output "ecs_task_last_status" {
     ECS_DESCRIBE
 }
 output "ecs_task_list_containers" {
-  description = "Exec will not work until last status is RUNNING"
+  description = "See other containers to exec into"
   value       = <<-ECS_DESCRIBE
     tsh aws ecs describe-tasks \
         --cluster ${module.ecs_cluster.name} \
