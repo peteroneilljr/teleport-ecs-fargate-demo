@@ -6,19 +6,19 @@
 provider "aws" {
   # profile = "default"
 
-  region = "us-west-2"
+  region = local.region
   # default_tags {
   #   tags = var.aws_tags
   # }
 }
 
 locals {
-  region = var.aws_region
-  name   = "pon-ecs"
+  region = "us-west-2"
+  name   = "teleport-ecs"
 
 
 
-  container_name = "pon-ecsdemo-frontend"
+  container_name = "teleport-ecsdemo"
   container_port = 3000
 
   vpc_id = module.vpc.vpc_id
@@ -68,21 +68,6 @@ module "ecs_cluster" {
 
   cluster_name = local.name
 
-  # Capacity provider
-  fargate_capacity_providers = {
-    FARGATE = {
-      default_capacity_provider_strategy = {
-        weight = 50
-        base   = 20
-      }
-    }
-    FARGATE_SPOT = {
-      default_capacity_provider_strategy = {
-        weight = 50
-      }
-    }
-  }
-
   # tags = local.tags
 }
 
@@ -101,6 +86,8 @@ module "ecs_service" {
 
   # Enables ECS Exec
   enable_execute_command = true
+
+  enable_autoscaling = false
 
   # Container definition(s)
   container_definitions = {
@@ -159,25 +146,7 @@ module "ecs_service" {
         }
       }
 
-      # Not required for fluent-bit, just an example
-      volumes_from = [{
-        sourceContainer = "fluent-bit"
-        readOnly        = false
-      }]
-
       memory_reservation = 100
-    }
-  }
-
-  service_connect_configuration = {
-    namespace = aws_service_discovery_http_namespace.this.arn
-    service = {
-      client_alias = {
-        port     = local.container_port
-        dns_name = local.container_name
-      }
-      port_name      = local.container_name
-      discovery_name = local.container_name
     }
   }
 
@@ -207,11 +176,6 @@ data "aws_ssm_parameter" "fluentbit" {
   name = "/aws/service/aws-for-fluent-bit/stable"
 }
 
-resource "aws_service_discovery_http_namespace" "this" {
-  name        = local.name
-  description = "CloudMap namespace for ${local.name}"
-  # tags        = local.tags
-}
 
 # ---------------------------------------------------------------------------- #
 # outputs
