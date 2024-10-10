@@ -222,18 +222,29 @@ output "ecs_list_tasks" {
   description = "List running tasks in the ECS Cluster"
   value       = <<-ECS_DESCRIBE
     tsh aws ecs list-tasks \
-        --cluster ${module.ecs_cluster.name} \
-        --desired-status "RUNNING"
+        --cluster ${module.ecs_cluster.name} 
     ECS_DESCRIBE
 }
-output "ecs_describe_task" {
+output "ecs_task_last_status" {
   description = "Exec will not work until last status is RUNNING"
   value       = <<-ECS_DESCRIBE
     tsh aws ecs describe-tasks \
-        --cluster pon-ecs \
+        --cluster ${module.ecs_cluster.name} \
         --tasks $(tsh aws ecs list-tasks \
-          --cluster pon-ecs \
-          --desired-status "RUNNING" | jq -r ".taskArns[0]") | jq -r ".tasks[0].lastStatus"
+          --cluster ${module.ecs_cluster.name} | \
+          jq -r ".taskArns[0]") | \
+          jq -r ".tasks[0].lastStatus"
+    ECS_DESCRIBE
+}
+output "ecs_task_list_containers" {
+  description = "Exec will not work until last status is RUNNING"
+  value       = <<-ECS_DESCRIBE
+    tsh aws ecs describe-tasks \
+        --cluster ${module.ecs_cluster.name} \
+        --tasks $(tsh aws ecs list-tasks \
+          --cluster ${module.ecs_cluster.name} | \
+          jq -r ".taskArns[0]") | \
+          jq -r ".tasks[0].containers[].name"
     ECS_DESCRIBE
 }
 output "ecs_exec_task" {
@@ -244,7 +255,6 @@ output "ecs_exec_task" {
         --interactive \
         --command "/bin/sh" \
         --task $(tsh aws ecs list-tasks \
-          --cluster ${module.ecs_cluster.name} \
-          --desired-status "RUNNING" | jq -r ".taskArns[0]")
+          --cluster ${module.ecs_cluster.name} | jq -r ".taskArns[0]")
     ECS_EXAMPLE
 }
